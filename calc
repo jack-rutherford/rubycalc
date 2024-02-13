@@ -1,7 +1,6 @@
 #!/usr/local/bin/ruby
 require 'stringio'
 require 'set'
-#testing
 
 class Token
    attr_reader :type, :line, :col
@@ -184,6 +183,47 @@ class SubNode < BinaryNode
       return @left.evaluate() - @right.evaluate()
    end
 end
+
+class DivideNode < BinaryNode
+   def initialize(left, right)
+      super(left,right)
+   end
+   
+   def evaluate() 
+      return @left.evaluate() / @right.evaluate()
+   end
+end
+
+class TimesNode < BinaryNode
+   def initialize(left, right)
+      super(left,right)
+   end
+   
+   def evaluate() 
+      return @left.evaluate() * @right.evaluate()
+   end
+end
+
+class StoreNode < UnaryNode
+   def initialize(subtree)
+      super(subtree)
+   end
+   
+   def evaluate() 
+      $calc.memory = @subTree.evaluate()
+      return $calc.memory
+   end
+end
+
+class RecallNode
+   def initialize()
+      
+   end
+   
+   def evaluate() 
+      return $calc.memory
+   end
+end
       
 class NumNode 
    def initialize(num)
@@ -241,12 +281,14 @@ private
       # Write your Term() code here. This code is just temporary
       # so you can try the calculator out before finishing it.
 
-      t = @scan.getToken()
+      # t = @scan.getToken()
       
-      if t.type == :number then
-         val = t.lex.to_i
-         return NumNode.new(val)
-      end
+      return RestTerm(Storable())
+
+      # if t.type == :number then
+      #    val = t.lex.to_i
+      #    return NumNode.new(val)
+      # end
       
       puts "Term not implemented\n"
       
@@ -255,18 +297,53 @@ private
    
    def RestTerm(e)
    
+      t = @scan.getToken()
+
+      if t.type == :times then
+         return RestTerm(TimesNode.new(e,Term()))
+      end
+
+      if t.type == :divide then
+         return RestTerm(DivideNode.new(e,Term()))
+      end
+
+      @scan.putBackToken()
+      return e
       puts "RestTerm not implemented"
       raise "Parse Error"
    end
    
    def Storable()
-   
+      f = Factor()
+      t = @scan.getToken()
+      if t.type == :keyword && t.lex == "S" then
+         return StoreNode.new(f)
+      end
+      @scan.putBackToken()
+      return f
       puts "Storable not implemented"
       raise "Parse Error"
    end
    
    def Factor() 
-   
+      t = @scan.getToken()
+      if t.type == :number then
+         val = t.lex.to_i
+         return NumNode.new(val)
+      end
+      if t.type == :keyword && t.lex == "R" then
+         return RecallNode.new()
+      end
+      if t.type == :lparen then
+         e = Expr()
+         t = @scan.getToken()
+         if t.type != :rparen then
+            print "Expected ). Found ", t.type, ".\n" 
+            raise "Parse Error"
+         end
+         return e
+      end
+
       puts "Factor not implemented"
       raise "Parse Error"
    end         
